@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Way Client — визуальный клиент для Minecraft</title>
+<style>
+  :root{
+    --bg: #07040d;
+    --panel: #120a20;
+    --panel-2: #1a0f30;
+    --violet: #b857f5;
+    --violet-deep: #7c3aed;
+    --violet-glow-08: rgba(184,87,245,0.08);
+    --violet-glow-35: rgba(184,87,245,0.35);
+    --violet-glow-50: rgba(184,87,245,0.5);
+    --ink: #f1eaff;
+    --ink-dim: #a898c4;
+    --violet-glow-18: rgba(184,87,245,0.18);
+    --line: var(--violet-glow-18);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit; text-decoration:none;}
+
+  /* NAV */
+  nav{
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 22px 6%;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(to bottom, rgba(7,4,13,0.85), transparent);
+  }
+  .logo-mark{
+    font-size:1.4rem; font-weight:700; letter-spacing:-0.02em;
+    color:var(--ink);
+  }
+  .logo-mark span{color:var(--violet);}
+  .nav-links{display:flex; gap:36px; font-size:0.92rem; color:var(--ink-dim);}
+  .nav-links a:hover{color:var(--ink);}
+  .nav-cta{
+    padding:10px 22px; border-radius:999px;
+    background:var(--violet); color:#0a0612; font-weight:600; font-size:0.9rem;
+  }
+  @media(max-width:760px){ .nav-links{display:none;} }
+
+  /* HERO */
+  .hero{
+    position:relative; min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding: 120px 6% 60px;
+  }
+  #hero-canvas{
+    position:absolute; inset:0; width:100%; height:100%;
+    z-index:1;
+  }
+  .hero-fallback{
+    position:absolute; inset:0;
+    background: radial-gradient(ellipse 60% 50% at 50% 42%, var(--violet-glow-35), transparent 70%),
+                radial-gradient(ellipse 100% 60% at 50% 100%, rgba(124,58,237,0.15), transparent);
+    z-index:0;
+  }
+  .hero-content{position:relative; z-index:2; max-width:720px; pointer-events:none;}
+  .hero h1{
+    font-size:clamp(2.6rem, 6vw, 4.4rem);
+    font-weight:700; letter-spacing:-0.03em; line-height:1.05;
+    margin-bottom:22px;
+  }
+  .hero p.lead{
+    font-size:1.15rem; color:var(--ink-dim); line-height:1.6;
+    max-width:520px; margin:0 auto 34px;
+  }
+  .hero-cta{
+    display:inline-flex; gap:16px; pointer-events:auto;
+  }
+  .btn-primary{
+    padding:15px 32px; border-radius:999px;
+    background:var(--violet); color:#0a0612; font-weight:600;
+    box-shadow:0 0 40px var(--violet-glow-35);
+    transition:transform .25s ease, box-shadow .25s ease;
+  }
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 0 55px var(--violet-glow-50);}
+  .btn-ghost{
+    padding:15px 28px; border-radius:999px;
+    border:1px solid var(--line); color:var(--ink);
+    transition:border-color .25s ease, background .25s ease;
+  }
+  .btn-ghost:hover{border-color:var(--violet); background:var(--violet-glow-08);}
+
+  .scroll-hint{
+    position:absolute; bottom:34px; left:50%; transform:translateX(-50%);
+    font-size:0.78rem; color:var(--ink-dim); z-index:2;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .scroll-hint::after{
+    content:""; width:1px; height:34px;
+    background:linear-gradient(to bottom, var(--violet), transparent);
+  }
+
+  /* SCROLL-DRIVEN SECTION */
+  .story{
+    position:relative;
+    padding: 0 6%;
+  }
+  .story-track{
+    display:flex; flex-direction:column; gap:0;
+  }
+  .story-step{
+    min-height:100vh;
+    display:flex; align-items:center;
+    max-width:460px;
+  }
+  .story-step:nth-child(even){ margin-left:auto; text-align:right; }
+  .story-step .eyebrow-num{
+    font-size:0.85rem; color:var(--violet); margin-bottom:14px; font-weight:600;
+  }
+  .story-step h2{
+    font-size:clamp(1.8rem, 3.4vw, 2.6rem);
+    font-weight:700; letter-spacing:-0.02em; line-height:1.15;
+    margin-bottom:16px;
+  }
+  .story-step p{
+    color:var(--ink-dim); font-size:1.02rem; line-height:1.65;
+  }
+
+  /* FEATURES */
+  .features{
+    padding: 140px 6% 100px;
+    max-width:1180px; margin:0 auto;
+  }
+  .section-head{ max-width:560px; margin-bottom:64px; }
+  .section-head h2{
+    font-size:clamp(2rem, 4vw, 2.8rem); font-weight:700; letter-spacing:-0.02em; margin-bottom:14px;
+  }
+  .section-head p{ color:var(--ink-dim); font-size:1.05rem; line-height:1.6; }
+
+  .feature-grid{
+    display:grid; grid-template-columns: repeat(4, 1fr); gap:1px;
+    background:var(--line); border:1px solid var(--line); border-radius:20px; overflow:hidden;
+  }
+  .feature-card{
+    background:var(--panel); min-height:230px;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+    position:relative;
+  }
+  .feature-card:nth-child(2){ background:var(--panel-2); }
+  .feature-card:nth-child(4){ background:var(--panel-2); }
+  .feature-preview{
+    width:100%; height:150px; flex:0 0 150px; position:relative; overflow:hidden;
+    background:var(--panel-2);
+  }
+  .feature-preview canvas{ width:100%; height:100%; display:block; position:absolute; inset:0; }
+  .feature-body{ padding:24px 26px 30px; display:flex; flex-direction:column; flex:1 1 auto; position:relative; z-index:1; }
+  .feature-icon{
+    width:30px; height:30px; margin-bottom:16px;
+    color: var(--violet);
+  }
+  .feature-card h3{ font-size:1.08rem; font-weight:600; margin-bottom:10px; }
+  .feature-card p{ font-size:0.92rem; color:var(--ink-dim); line-height:1.55; }
+  @media(max-width:900px){ .feature-grid{grid-template-columns: repeat(2, 1fr);} }
+  @media(max-width:560px){ .feature-grid{grid-template-columns: 1fr;} }
+
+  /* COLOR VARIANTS (glow theme picker) */
+  .themes{
+    padding: 60px 6% 140px; max-width:1180px; margin:0 auto;
+    display:flex; flex-wrap:wrap; gap:60px; align-items:center;
+  }
+  .theme-stage{
+    flex:1 1 340px; min-width:300px; height:340px; position:relative;
+    border-radius:24px; overflow:hidden; border:1px solid var(--line);
+    background:var(--panel);
+  }
+  #theme-canvas{width:100%; height:100%; display:block;}
+  .theme-panel{ flex:1 1 340px; min-width:280px; }
+  .theme-panel h2{ font-size:1.9rem; font-weight:700; margin-bottom:14px; letter-spacing:-0.02em; }
+  .theme-panel p{ color:var(--ink-dim); margin-bottom:28px; line-height:1.6; }
+  .swatches{ display:flex; gap:14px; }
+  .swatch{
+    width:44px; height:44px; border-radius:50%; cursor:pointer;
+    border:2px solid transparent; transition:transform .2s ease, border-color .2s ease;
+  }
+  .swatch:hover{ transform:scale(1.1); }
+  .swatch.active{ border-color:var(--ink); }
+
+  /* SPECS */
+  .specs{ padding: 0 6% 140px; max-width:1180px; margin:0 auto; }
+  .specs-table{ width:100%; border-collapse:collapse; }
+  .specs-table tr{ border-bottom:1px solid var(--line); }
+  .specs-table tr:first-child{ border-top:1px solid var(--line); }
+  .specs-table td{ padding:20px 0; }
+  .specs-table td:first-child{ color:var(--ink-dim); font-size:0.92rem; width:220px; }
+  .specs-table td:last-child{ font-size:1.02rem; font-weight:500; }
+
+  /* FINAL CTA */
+  .final-cta{
+    position:relative; min-height:70vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:100px 6%; overflow:hidden;
+  }
+  #final-canvas{ position:absolute; inset:0; width:100%; height:100%; z-index:1; }
+  .final-content{ position:relative; z-index:2; }
+  .final-cta h2{
+    font-size:clamp(2.2rem, 5vw, 3.4rem); font-weight:700; letter-spacing:-0.03em;
+    margin-bottom:18px;
+  }
+  .final-cta p{ color:var(--ink-dim); margin-bottom:34px; font-size:1.05rem; }
+
+  footer{
+    padding:40px 6%; text-align:center; color:var(--ink-dim); font-size:0.85rem;
+    border-top:1px solid var(--line);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo-mark">Way<span>.</span>Client</div>
+  <div class="nav-links">
+    <a href="#story">Возможности</a>
+    <a href="#features">Детали</a>
+    <a href="#themes">Темы</a>
+    <a href="#specs">Характеристики</a>
+  </div>
+  <a href="#final" class="nav-cta">Скачать Way Client</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-fallback"></div>
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-content">
+    <h1>Minecraft, каким его стоит видеть</h1>
+    <p class="lead">Way Client — визуальный клиент, который меняет свет, тени и материалы игры, не трогая её механику. Один мод, чтобы мир выглядел так, как ты его представлял.</p>
+    <div class="hero-cta">
+      <a href="#final" class="btn-primary">Скачать Way Client</a>
+      <a href="#story" class="btn-ghost">Как это выглядит</a>
+    </div>
+  </div>
+  <div class="scroll-hint">Листай вниз</div>
+</section>
+
+<section class="story" id="story">
+  <div class="story-track">
+    <div class="story-step">
+      <div class="eyebrow-num">Освещение</div>
+      <h2>Свет ведёт себя как свет</h2>
+      <p>Мягкие тени, объёмные лучи сквозь листву, тёплые отблески от лавы — Way Client пересчитывает освещение сцены в реальном времени, без домашних заготовок.</p>
+    </div>
+    <div class="story-step">
+      <div class="eyebrow-num">Материалы</div>
+      <h2>Текстуры получают глубину</h2>
+      <p>Камень становится шероховатым, металл — отражающим, вода — прозрачной. PBR-материалы поверх ванильных текстур без замены ресурспака.</p>
+    </div>
+    <div class="story-step">
+      <div class="eyebrow-num">Погода и атмосфера</div>
+      <h2>Небо меняется вместе с миром</h2>
+      <p>Динамические облака, объёмный туман в пещерах, реалистичные закаты — атмосфера подстраивается под биом и время суток.</p>
+    </div>
+    <div class="story-step">
+      <div class="eyebrow-num">Производительность</div>
+      <h2>Красиво — не значит медленно</h2>
+      <p>Адаптивный рендер держит частоту кадров стабильной и на топовой видеокарте, и на встроенной графике — просто с разным уровнем детализации.</p>
+    </div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="section-head">
+    <h2>Что меняется в игре</h2>
+    <p>Четыре системы, которые Way Client перестраивает под капотом — визуально, но не в ущерб привычному геймплею.</p>
+  </div>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-preview"><canvas data-scene="shadows"></canvas></div>
+      <div class="feature-body">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8L7 17M17 7l2.8-2.8"/></svg>
+        <h3>Динамические тени</h3>
+        <p>Каждый блок отбрасывает мягкую тень, которая двигается вслед за солнцем и факелами.</p>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-preview"><canvas data-scene="water"></canvas></div>
+      <div class="feature-body">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12s3-7 9-7 9 7 9 7-3 7-9 7-9-7-9-7Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+        <h3>Отражения на воде</h3>
+        <p>Реки и океаны отражают небо и постройки в реальном времени, с лёгкой рябью от ветра.</p>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-preview"><canvas data-scene="fog"></canvas></div>
+      <div class="feature-body">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 18h16M4 14h10M4 10h16M4 6h7"/></svg>
+        <h3>Объёмный туман</h3>
+        <p>Пещеры и низины получают глубину за счёт рассеянного света, а не плоской дымки.</p>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-preview"><canvas data-scene="presets"></canvas></div>
+      <div class="feature-body">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12h8M12 8v8"/></svg>
+        <h3>Гибкие пресеты</h3>
+        <p>От «максимум fps» до «максимум детализации» — один переключатель без ручной настройки конфигов.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="themes" id="themes">
+  <div class="theme-stage">
+    <canvas id="theme-canvas"></canvas>
+  </div>
+  <div class="theme-panel">
+    <h2>Настрой свечение под себя</h2>
+    <p>Интерфейс и акцентные эффекты Way Client можно перекрасить под любимую палитру — от классического фиолетового до ледяного циана.</p>
+    <div class="swatches">
+      <div class="swatch active" data-color="#b857f5" style="background:#b857f5"></div>
+      <div class="swatch" data-color="#3ddcff" style="background:#3ddcff"></div>
+      <div class="swatch" data-color="#ff5470" style="background:#ff5470"></div>
+      <div class="swatch" data-color="#5eff8f" style="background:#5eff8f"></div>
+    </div>
+  </div>
+</section>
+
+<section class="specs" id="specs">
+  <div class="section-head">
+    <h2>Характеристики</h2>
+  </div>
+  <table class="specs-table">
+    <tr><td>Совместимость</td><td>Minecraft Java Edition, [уточнить: диапазон версий]</td></tr>
+    <tr><td>Требуемая видеопамять</td><td>от 2 ГБ, рекомендуется 4 ГБ+</td></tr>
+    <tr><td>Установка</td><td>Через модлоадер, без замены ресурспака</td></tr>
+    <tr><td>Настройка</td><td>Готовые пресеты + ручная тонкая настройка</td></tr>
+    <tr><td>Лицензия</td><td>[уточнить: условия распространения]</td></tr>
+  </table>
+</section>
+
+<section class="final-cta" id="final">
+  <canvas id="final-canvas"></canvas>
+  <div class="final-content">
+    <h2>Пора увидеть мир иначе</h2>
+    <p>Установка занимает пару минут. Дальше — только твой мир.</p>
+    <a href="#" class="btn-primary">Скачать Way Client</a>
+  </div>
+</section>
+
+<footer>
+  Way Client — визуальный клиент для Minecraft. Не аффилирован с Mojang/Microsoft.
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var hasWebGL = (function(){
+    try{
+      var c = document.createElement("canvas");
+      return !!(window.WebGLRenderingContext && (c.getContext("webgl") || c.getContext("experimental-webgl")));
+    }catch(e){ return false; }
+  })();
+
+  if(!hasWebGL){
+    // fallback: static gradient already present via .hero-fallback; hide canvases
+    document.querySelectorAll("canvas").forEach(function(c){ c.style.display="none"; });
+    return;
+  }
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  // ---------- Shared: build the "W" logo mesh ----------
+  function buildWShape(){
+    var shape = new THREE.Shape();
+    // Coordinates define a bold, chunky "W" silhouette (outer outline),
+    // then a matching inner cut via holes to give it thickness/legibility.
+    // Units are arbitrary; scaled later.
+    var pts = [
+      [-3.4, 3.2], [-2.0, 3.2], [-0.7, -1.2], [0.55, 2.1],
+      [1.0, 2.1], [2.25, -1.2], [3.55, 3.2], [4.95, 3.2],
+      [2.9, -3.3], [1.55, -3.3], [0.775, -0.7], [0.0, -3.3],
+      [-1.0, -3.3], [-1.0, -3.3]
+    ];
+    // Simplify to a clean zig-zag "W" outline (12 points), full closed path
+    var outer = [
+      [-4.6, 3.3],
+      [-2.9, 3.3],
+      [-1.4, -1.9],
+      [0.0, 1.7],
+      [1.4, -1.9],
+      [2.9, 3.3],
+      [4.6, 3.3],
+      [2.1, -3.4],
+      [0.65, -3.4],
+      [0.0, -1.1],
+      [-0.65, -3.4],
+      [-2.1, -3.4]
+    ];
+    shape.moveTo(outer[0][0], outer[0][1]);
+    for(var i=1;i<outer.length;i++){ shape.lineTo(outer[i][0], outer[i][1]); }
+    shape.closePath();
+    return shape;
+  }
+
+  function createLogoMesh(color){
+    var shape = buildWShape();
+    var extrudeSettings = {
+      depth: 1.1,
+      bevelEnabled: true,
+      bevelThickness: 0.16,
+      bevelSize: 0.14,
+      bevelSegments: 4,
+      curveSegments: 4
+    };
+    var geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    geo.center();
+    var mat = new THREE.MeshPhysicalMaterial({
+      color: 0x120a20,
+      metalness: 0.65,
+      roughness: 0.28,
+      clearcoat: 0.6,
+      clearcoatRoughness: 0.25,
+      emissive: new THREE.Color(color),
+      emissiveIntensity: 0.35
+    });
+    var mesh = new THREE.Mesh(geo, mat);
+
+    // Rim / edge glow via a slightly larger backing shell rendered as backside
+    var rimMat = new THREE.MeshBasicMaterial({
+      color: color, transparent:true, opacity:0.55, side: THREE.BackSide
+    });
+    var rimGeo = geo.clone();
+    var rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.scale.set(1.045, 1.045, 1.08);
+    mesh.add(rim);
+
+    return mesh;
+  }
+
+  function makeThreePointLights(scene, color){
+    var key = new THREE.DirectionalLight(0xfff2e0, 1.1);
+    key.position.set(4, 6, 5);
+    scene.add(key);
+
+    var fill = new THREE.DirectionalLight(0x8fb8ff, 0.5);
+    fill.position.set(-5, 2, 3);
+    scene.add(fill);
+
+    var rim = new THREE.PointLight(color, 2.2, 20);
+    rim.position.set(0, -2, -4);
+    scene.add(rim);
+
+    var ambient = new THREE.AmbientLight(0x3a2a55, 0.6);
+    scene.add(ambient);
+
+    return {key:key, fill:fill, rim:rim};
+  }
+
+  function makeGroundGlow(scene, color){
+    var geo = new THREE.CircleGeometry(6, 48);
+    var mat = new THREE.MeshBasicMaterial({
+      color: color, transparent:true, opacity:0.12
+    });
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.x = -Math.PI/2;
+    mesh.position.y = -3.6;
+    scene.add(mesh);
+    return mesh;
+  }
+
+  // ---------- GLOBAL ACCENT STATE ----------
+  var currentAccentHex = "#b857f5";
+
+  // ---------- HERO SCENE ----------
+  var heroCanvas = document.getElementById("hero-canvas");
+  var heroScene = new THREE.Scene();
+  var heroCamera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 100);
+  heroCamera.position.set(0, 0, 11);
+
+  var heroRenderer = new THREE.WebGLRenderer({canvas: heroCanvas, antialias:true, alpha:true});
+  heroRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  heroRenderer.setSize(window.innerWidth, window.innerHeight);
+
+  var accentColor = 0xb857f5;
+  var heroLogo = createLogoMesh(accentColor);
+  heroLogo.scale.set(0.9,0.9,0.9);
+  heroScene.add(heroLogo);
+  var heroLights = makeThreePointLights(heroScene, accentColor);
+  var heroGround = makeGroundGlow(heroScene, accentColor);
+
+  var heroInView = true;
+  var heroObserver = new IntersectionObserver(function(entries){
+    heroInView = entries[0].isIntersecting;
+  });
+  heroObserver.observe(document.querySelector(".hero"));
+
+  var mouseX = 0, mouseY = 0;
+  window.addEventListener("mousemove", function(e){
+    mouseX = (e.clientX / window.innerWidth) - 0.5;
+    mouseY = (e.clientY / window.innerHeight) - 0.5;
+  });
+
+  var clock = new THREE.Clock();
+  function animateHero(){
+    requestAnimationFrame(animateHero);
+    if(!heroInView) return;
+    var t = clock.getElapsedTime();
+    if(!reducedMotion){
+      heroLogo.rotation.y = Math.sin(t*0.35)*0.28 + mouseX*0.5;
+      heroLogo.rotation.x = Math.sin(t*0.28)*0.08 + mouseY*0.3;
+      heroLogo.position.y = Math.sin(t*0.6)*0.15;
+    }
+    heroRenderer.render(heroScene, heroCamera);
+  }
+  animateHero();
+
+  // ---------- SCROLL-DRIVEN CAMERA (ties hero logo timeline to .story section) ----------
+  if(!reducedMotion){
+    gsap.timeline({
+      scrollTrigger:{
+        trigger: "#story",
+        start: "top top",
+        end: "bottom bottom",
+        scrub: 1
+      }
+    })
+    .to(heroLogo.rotation, {y: Math.PI*1.4, x: 0.6, ease:"none"}, 0)
+    .to(heroLogo.scale, {x:1.4, y:1.4, z:1.4, ease:"none"}, 0)
+    .to(heroLogo.position, {z: -2, y: 1, ease:"none"}, 0)
+    .to(heroCanvas, {opacity: 0.35, ease:"none"}, 0.7);
+  }
+
+  // fade in story steps
+  document.querySelectorAll(".story-step").forEach(function(step){
+    gsap.fromTo(step, {opacity:0, y: 40}, {
+      opacity:1, y:0, duration:0.8, ease:"power2.out",
+      scrollTrigger:{ trigger: step, start:"top 75%" }
+    });
+  });
+
+  // ---------- THEME PICKER SCENE ----------
+  var themeCanvas = document.getElementById("theme-canvas");
+  var themeScene = new THREE.Scene();
+  var themeCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  themeCamera.position.set(0,0,10);
+  var themeRenderer = new THREE.WebGLRenderer({canvas: themeCanvas, antialias:true, alpha:true});
+  themeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  var themeLogo = createLogoMesh(0xb857f5);
+  themeScene.add(themeLogo);
+  var themeLights = makeThreePointLights(themeScene, 0xb857f5);
+  makeGroundGlow(themeScene, 0xb857f5);
+
+  function resizeThemeCanvas(){
+    var stage = document.querySelector(".theme-stage");
+    var w = stage.clientWidth, h = stage.clientHeight;
+    themeRenderer.setSize(w, h);
+    themeCamera.aspect = w/h;
+    themeCamera.updateProjectionMatrix();
+  }
+  resizeThemeCanvas();
+
+  var themeInView = false;
+  new IntersectionObserver(function(entries){ themeInView = entries[0].isIntersecting; })
+    .observe(document.querySelector(".theme-stage"));
+
+  function animateTheme(){
+    requestAnimationFrame(animateTheme);
+    if(!themeInView) return;
+    if(!reducedMotion){ themeLogo.rotation.y += 0.006; }
+    themeRenderer.render(themeScene, themeCamera);
+  }
+  animateTheme();
+
+  document.querySelectorAll(".swatch").forEach(function(sw){
+    sw.addEventListener("click", function(){
+      document.querySelectorAll(".swatch").forEach(function(s){ s.classList.remove("active"); });
+      sw.classList.add("active");
+      var hex = sw.getAttribute("data-color");
+      applyAccentColor(hex);
+    });
+  });
+
+  function hexToRgba(hex, alpha){
+    var r = parseInt(hex.slice(1,3),16);
+    var g = parseInt(hex.slice(3,5),16);
+    var b = parseInt(hex.slice(5,7),16);
+    return "rgba("+r+","+g+","+b+","+alpha+")";
+  }
+
+  function applyAccentColor(hex){
+    currentAccentHex = hex;
+    var colorObj = new THREE.Color(hex);
+
+    // CSS custom properties used across buttons, borders, icons, glows
+    var root = document.documentElement.style;
+    root.setProperty("--violet", hex);
+    root.setProperty("--violet-glow-08", hexToRgba(hex,0.08));
+    root.setProperty("--violet-glow-18", hexToRgba(hex,0.18));
+    root.setProperty("--violet-glow-35", hexToRgba(hex,0.35));
+    root.setProperty("--violet-glow-50", hexToRgba(hex,0.5));
+
+    // theme picker scene
+    themeLogo.material.emissive = colorObj;
+    themeLogo.children[0].material.color = colorObj;
+    themeLights.rim.color = colorObj;
+
+    // hero scene
+    heroLogo.material.emissive = colorObj;
+    heroLogo.children[0].material.color = colorObj;
+    heroLights.rim.color = colorObj;
+    heroGround.material.color = colorObj;
+
+    // final CTA scene
+    finalLogo.material.emissive = colorObj;
+    finalLogo.children[0].material.color = colorObj;
+    finalLights.rim.color = colorObj;
+  }
+
+  // ---------- FINAL CTA SCENE (smaller repeat) ----------
+  var finalCanvas = document.getElementById("final-canvas");
+  var finalScene = new THREE.Scene();
+  var finalCamera = new THREE.PerspectiveCamera(45, window.innerWidth/600, 0.1, 100);
+  finalCamera.position.set(0,0,12);
+  var finalRenderer = new THREE.WebGLRenderer({canvas: finalCanvas, antialias:true, alpha:true});
+  finalRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  var finalLogo = createLogoMesh(0xb857f5);
+  finalLogo.scale.set(0.6,0.6,0.6);
+  finalScene.add(finalLogo);
+  var finalLights = makeThreePointLights(finalScene, 0xb857f5);
+
+  function resizeFinal(){
+    var el = document.querySelector(".final-cta");
+    var w = el.clientWidth, h = el.clientHeight;
+    finalRenderer.setSize(w, h);
+    finalCamera.aspect = w/h;
+    finalCamera.updateProjectionMatrix();
+  }
+  resizeFinal();
+
+  var finalInView = false;
+  new IntersectionObserver(function(entries){ finalInView = entries[0].isIntersecting; })
+    .observe(document.querySelector(".final-cta"));
+
+  function animateFinal(){
+    requestAnimationFrame(animateFinal);
+    if(!finalInView) return;
+    if(!reducedMotion){ finalLogo.rotation.y += 0.004; finalLogo.position.y = Math.sin(Date.now()*0.0006)*0.2; }
+    finalRenderer.render(finalScene, finalCamera);
+  }
+  animateFinal();
+
+  // ---------- FEATURE CARD PREVIEWS (procedural voxel-style illustrations) ----------
+  function drawVoxelBase(ctx, w, h, palette){
+    // sky gradient
+    var sky = ctx.createLinearGradient(0,0,0,h*0.62);
+    sky.addColorStop(0, palette.skyTop);
+    sky.addColorStop(1, palette.skyBottom);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0,0,w,h*0.62);
+
+    // ground gradient
+    var ground = ctx.createLinearGradient(0,h*0.6,0,h);
+    ground.addColorStop(0, palette.groundTop);
+    ground.addColorStop(1, palette.groundBottom);
+    ctx.fillStyle = ground;
+    ctx.fillRect(0,h*0.6,w,h*0.4);
+
+    // simple voxel "hill" silhouette made of blocks
+    var blockSize = w/16;
+    var heights = [3,4,4,5,6,5,4,5,6,7,6,5,4,3,4,3];
+    ctx.fillStyle = palette.blockFill;
+    for(var i=0;i<heights.length;i++){
+      var bx = i*blockSize;
+      var bh = heights[i]*blockSize*0.55;
+      var by = h*0.62 - bh;
+      ctx.fillRect(bx, by, blockSize+0.6, bh + h*0.4);
+      // top highlight
+      ctx.fillStyle = palette.blockTop;
+      ctx.fillRect(bx, by, blockSize+0.6, blockSize*0.35);
+      ctx.fillStyle = palette.blockFill;
+    }
+  }
+
+  function drawSceneShadows(ctx, w, h, t){
+    drawVoxelBase(ctx, w, h, {
+      skyTop:"#2a1240", skyBottom:"#4a2170",
+      groundTop:"#3a1f5c", groundBottom:"#1c0e30",
+      blockFill:"#523083", blockTop:"#7a52b8"
+    });
+    // sun
+    var sunX = w*0.78, sunY = h*0.18;
+    var glow = ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,w*0.22);
+    glow.addColorStop(0,"rgba(255,224,170,0.9)");
+    glow.addColorStop(1,"rgba(255,224,170,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = "#ffe8b8";
+    ctx.beginPath(); ctx.arc(sunX,sunY,w*0.045,0,Math.PI*2); ctx.fill();
+
+    // moving cast shadows from blocks (simple parallelograms)
+    var blockSize = w/16;
+    var heights = [3,4,4,5,6,5,4,5,6,7,6,5,4,3,4,3];
+    var shear = 0.9 + Math.sin(t*0.4)*0.15;
+    ctx.fillStyle = "rgba(10,4,20,0.4)";
+    for(var i=0;i<heights.length;i++){
+      var bx = i*blockSize;
+      var bh = heights[i]*blockSize*0.55;
+      var topY = h*0.62 - bh;
+      ctx.beginPath();
+      ctx.moveTo(bx, h*0.62);
+      ctx.lineTo(bx+blockSize, h*0.62);
+      ctx.lineTo(bx+blockSize + bh*shear*0.4, h*0.62 + bh*0.5);
+      ctx.lineTo(bx + bh*shear*0.4, h*0.62 + bh*0.5);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawSceneWater(ctx, w, h, t){
+    drawVoxelBase(ctx, w, h, {
+      skyTop:"#1c1836", skyBottom:"#3a2a5c",
+      groundTop:"#2a4a5c", groundBottom:"#12222c",
+      blockFill:"#3f6a86", blockTop:"#5f97ad"
+    });
+    var waterY = h*0.68;
+    var water = ctx.createLinearGradient(0,waterY,0,h);
+    water.addColorStop(0,"rgba(90,180,220,0.55)");
+    water.addColorStop(1,"rgba(10,30,45,0.85)");
+    ctx.fillStyle = water;
+    ctx.fillRect(0,waterY,w,h-waterY);
+
+    // reflected sky/blocks streaks
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.translate(0, waterY*2);
+    ctx.scale(1,-1);
+    var grd2 = ctx.createLinearGradient(0,0,0,waterY*0.5);
+    grd2.addColorStop(0,"#7a52b8");
+    grd2.addColorStop(1,"rgba(122,82,184,0)");
+    ctx.fillStyle = grd2;
+    ctx.fillRect(0, waterY*1.3, w, waterY*0.5);
+    ctx.restore();
+
+    // ripple lines
+    ctx.strokeStyle = "rgba(220,240,255,0.35)";
+    ctx.lineWidth = 1.5;
+    for(var r=0;r<4;r++){
+      var ry = waterY + 14 + r*16;
+      var off = Math.sin(t*1.2 + r)*6;
+      ctx.beginPath();
+      for(var x=0;x<=w;x+=8){
+        var yy = ry + Math.sin((x*0.06)+t*1.5+r)*2 + off*0.2;
+        if(x===0) ctx.moveTo(x,yy); else ctx.lineTo(x,yy);
+      }
+      ctx.stroke();
+    }
+  }
+
+  function drawSceneFog(ctx, w, h, t){
+    // dark cave gradient
+    var g = ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,"#0c0816");
+    g.addColorStop(1,"#1c1030");
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,w,h);
+
+    // cave rock silhouettes
+    ctx.fillStyle = "#241638";
+    ctx.beginPath();
+    ctx.moveTo(0,h);
+    ctx.lineTo(0,h*0.5);
+    ctx.lineTo(w*0.2,h*0.65);
+    ctx.lineTo(w*0.4,h*0.4);
+    ctx.lineTo(w*0.6,h*0.6);
+    ctx.lineTo(w*0.8,h*0.35);
+    ctx.lineTo(w,h*0.55);
+    ctx.lineTo(w,h);
+    ctx.closePath();
+    ctx.fill();
+
+    // light shaft
+    ctx.save();
+    var lgAngle = 0.25;
+    ctx.translate(w*0.65, 0);
+    ctx.rotate(lgAngle);
+    var shaft = ctx.createLinearGradient(0,0,0,h);
+    shaft.addColorStop(0,hexToRgba(currentAccentHex,0.5));
+    shaft.addColorStop(1,hexToRgba(currentAccentHex,0));
+    ctx.fillStyle = shaft;
+    ctx.fillRect(-w*0.09, -20, w*0.18, h*1.3);
+    ctx.restore();
+
+    // volumetric fog layers drifting
+    for(var i=0;i<3;i++){
+      var fy = h*0.55 + i*18;
+      var fx = (Math.sin(t*0.3+i)*10);
+      var fog = ctx.createRadialGradient(w*0.5+fx, fy, 0, w*0.5+fx, fy, w*0.45);
+      fog.addColorStop(0,"rgba(200,180,230,"+(0.14-i*0.03)+")");
+      fog.addColorStop(1,"rgba(200,180,230,0)");
+      ctx.fillStyle = fog;
+      ctx.fillRect(0,0,w,h);
+    }
+  }
+
+  function drawScenePresets(ctx, w, h, t){
+    // split screen: left = low detail, right = high detail
+    var splitX = w*0.5 + Math.sin(t*0.5)*w*0.03;
+
+    // left: flat low-fi
+    ctx.fillStyle = "#241a38";
+    ctx.fillRect(0,0,splitX,h);
+    ctx.fillStyle = "#3a2a54";
+    for(var i=0;i<6;i++){
+      ctx.fillRect((i*splitX)/6, h*0.55, splitX/6-2, h*0.45);
+    }
+    ctx.fillStyle = "#4a3466";
+    ctx.fillRect(0,0,splitX,h*0.5);
+
+    // right: rich hi-fi with gradient + glow blocks
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(splitX,0,w-splitX,h);
+    ctx.clip();
+    drawVoxelBase(ctx, w, h, {
+      skyTop:"#2a1240", skyBottom:"#5a2f8c",
+      groundTop:"#3a1f5c", groundBottom:"#1c0e30",
+      blockFill:"#7a52b8", blockTop:"#c98bf5"
+    });
+    var glow = ctx.createRadialGradient(w*0.8,h*0.3,0,w*0.8,h*0.3,w*0.3);
+    glow.addColorStop(0,hexToRgba(currentAccentHex,0.4));
+    glow.addColorStop(1,hexToRgba(currentAccentHex,0));
+    ctx.fillStyle = glow;
+    ctx.fillRect(splitX,0,w-splitX,h);
+    ctx.restore();
+
+    // divider line
+    ctx.strokeStyle = "rgba(241,234,255,0.6)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(splitX,0); ctx.lineTo(splitX,h);
+    ctx.stroke();
+  }
+
+  var sceneDrawers = {
+    shadows: drawSceneShadows,
+    water: drawSceneWater,
+    fog: drawSceneFog,
+    presets: drawScenePresets
+  };
+
+  var previewCanvases = [];
+  document.querySelectorAll(".feature-preview canvas").forEach(function(canvas){
+    var ctx = canvas.getContext("2d");
+    var sceneName = canvas.getAttribute("data-scene");
+    var drawer = sceneDrawers[sceneName];
+    var visible = false;
+    function resize(){
+      var rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * Math.min(window.devicePixelRatio,2);
+      canvas.height = rect.height * Math.min(window.devicePixelRatio,2);
+    }
+    resize();
+    window.addEventListener("resize", resize);
+    new IntersectionObserver(function(entries){ visible = entries[0].isIntersecting; })
+      .observe(canvas);
+    previewCanvases.push({ctx:ctx, canvas:canvas, drawer:drawer, isVisible:function(){return visible;}});
+  });
+
+  function animatePreviews(){
+    requestAnimationFrame(animatePreviews);
+    var t = clock.getElapsedTime();
+    previewCanvases.forEach(function(p){
+      if(!p.isVisible()) return;
+      p.drawer(p.ctx, p.canvas.width, p.canvas.height, reducedMotion ? 0 : t);
+    });
+  }
+  animatePreviews();
+
+  // ---------- Resize handling ----------
+  window.addEventListener("resize", function(){
+    heroRenderer.setSize(window.innerWidth, window.innerHeight);
+    heroCamera.aspect = window.innerWidth/window.innerHeight;
+    heroCamera.updateProjectionMatrix();
+    resizeThemeCanvas();
+    resizeFinal();
+  });
+
+})();
+</script>
+</body>
+</html>
